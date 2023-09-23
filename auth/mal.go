@@ -5,7 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"ipmanlk/ani2mal/config"
+	"ipmanlk/ani2mal/models"
 	"ipmanlk/ani2mal/utils"
 	"log"
 	"net/http"
@@ -31,19 +33,26 @@ func AuthMal() {
 	fmt.Print("Enter the code from the login URL: ")
 	code := utils.GetStrInput()
 
-	token, err := getToken(clientId, clientSecret, code, codeVerifier)
+	token, err := getAccessToken(clientId, clientSecret, code, codeVerifier)
 	if err != nil {
-		fmt.Printf("Error getting token: %v\n", err)
-		return
+		log.Fatalf("Error getting token: %v\n", err)
 	}
 
 	err = saveTokenToFile(token, "token.txt")
 	if err != nil {
-		fmt.Printf("Error saving token: %v\n", err)
-		return
+		log.Fatalf("Error saving token: %v\n", err)
 	}
 
-	fmt.Println("Authentication successful. Token saved to token.txt")
+	// Get App config
+	appConfig := config.GetAppConfig()
+
+	appConfig.SaveMalConfig(&models.MalConfig{
+		ClientId:     clientId,
+		ClientSecret: clientSecret,
+		AccessToken:  token,
+	})
+
+	fmt.Println("Authentication successful. Access token has been saved.")
 }
 
 // getAuthenticationURL retrieves the authentication URL with code_challenge
@@ -51,8 +60,8 @@ func getAuthenticationURL(clientId, codeChallenge string) string {
 	return fmt.Sprintf("https://myanimelist.net/v1/oauth2/authorize?response_type=code&client_id=%s&code_challenge=%s", clientId, codeChallenge)
 }
 
-// getToken exchanges the code for an access token
-func getToken(clientId, clientSecret, authorizationCode,codeVerifier  string) (string, error) {
+// getAccessToken exchanges the code for an access token
+func getAccessToken(clientId, clientSecret, authorizationCode, codeVerifier string) (string, error) {
 	tokenEndpoint := "https://myanimelist.net/v1/oauth2/token"
 
 	data := url.Values{}
@@ -71,7 +80,7 @@ func getToken(clientId, clientSecret, authorizationCode,codeVerifier  string) (s
 	defer resp.Body.Close()
 
 	// Read the response body.
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Unable to read response body:", err)
 		os.Exit(1)
