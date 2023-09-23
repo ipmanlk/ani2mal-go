@@ -5,10 +5,11 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"ipmanlk/ani2mal/utils"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -20,14 +21,17 @@ func AuthMal() {
 	fmt.Print("Enter Client Secret: ")
 	clientSecret := utils.GetStrInput()
 
+	// Generate a code verifier and code challenge
+	codeVerifier := generateCodeVerifier()
+
 	// Use the getAuthenticationURL function to retrieve the login URL
-	loginURL := getAuthenticationURL(clientId)
+	loginURL := getAuthenticationURL(clientId, codeVerifier)
 	fmt.Printf("Login URL: %s\n", loginURL)
 
 	fmt.Print("Enter the code from the login URL: ")
 	code := utils.GetStrInput()
 
-	token, err := getToken(clientId, clientSecret, code)
+	token, err := getToken(clientId, clientSecret, code, codeVerifier)
 	if err != nil {
 		fmt.Printf("Error getting token: %v\n", err)
 		return
@@ -43,40 +47,34 @@ func AuthMal() {
 }
 
 // getAuthenticationURL retrieves the authentication URL with code_challenge
-func getAuthenticationURL(clientId string) string {
-	codeVerifier := generateCodeVerifier()
-	codeChallenge := codeVerifier
-
+func getAuthenticationURL(clientId, codeChallenge string) string {
 	return fmt.Sprintf("https://myanimelist.net/v1/oauth2/authorize?response_type=code&client_id=%s&code_challenge=%s", clientId, codeChallenge)
 }
 
 // getToken exchanges the code for an access token
-func getToken(clientId, clientSecret, code string) (string, error) {
+func getToken(clientId, clientSecret, authorizationCode,codeVerifier  string) (string, error) {
 	tokenEndpoint := "https://myanimelist.net/v1/oauth2/token"
 
-	// Prepare the request body
-	requestBody := fmt.Sprintf("client_id=%s&client_secret=%s&code=%s&grant_type=authorization_code", clientId, clientSecret, code)
+	data := url.Values{}
+	data.Set("client_id", clientId)
+	data.Set("client_secret", clientSecret)
+	data.Set("code", authorizationCode)
+	data.Set("code_verifier", codeVerifier)
+	data.Set("grant_type", "authorization_code")
 
-	// Create an HTTP POST request
-	req, err := http.NewRequest("POST", tokenEndpoint, strings.NewReader(requestBody))
+	// Send a POST request to obtain the token.
+	resp, err := http.Post(tokenEndpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	// Perform the request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
+		fmt.Println("Unable to request token:", err)
+		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
-	// Read the response body
-	body, err := io.ReadAll(resp.Body)
+	// Read the response body.
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		fmt.Println("Unable to read response body:", err)
+		os.Exit(1)
 	}
 
 	// Check for errors in the response

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"strings"
 )
 
 func GetStrInput() string {
@@ -14,5 +15,6 @@ func GetStrInput() string {
 		log.Fatal(err)
 	}
 
+	input = strings.TrimRight(input, "\n")
 	return input
 }
