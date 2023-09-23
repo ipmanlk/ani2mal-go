@@ -15,6 +15,5 @@ func GetStrInput() string {
 		log.Fatal(err)
 	}
 
-	input = strings.TrimRight(input, "\n")
-	return input
+	return strings.TrimSpace(input)
 }
