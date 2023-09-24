@@ -62,7 +62,7 @@ func (cfg *AppConfig) GetMalConfig() *models.MalConfig {
 		if os.IsNotExist(err) {
 					log.Fatal("Please login to MyAnimeList first")
 		}
-		log.Fatalf("Failed to read MyAnimeList configuration file. Check if file permissions are correct %v", err)
+		log.Fatalf("Failed to read MyAnimeList configuration file. Check if file permissions are correct %+v", err)
 	}
 
 	content, _ := os.ReadFile(cfg.malConfigPath)

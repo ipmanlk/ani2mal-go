@@ -36,7 +36,7 @@ func AuthMal() {
 	fmt.Print("Enter the code from the login URL: ")
 	code := utils.GetStrInput()
 
-	token, err := getAccessToken(clientId, clientSecret, code, codeVerifier)
+	res, err := getAccessTokenRes(clientId, clientSecret, code, codeVerifier)
 	if err != nil {
 		log.Fatal(err.Error(), err)
 	}
@@ -47,27 +47,68 @@ func AuthMal() {
 	appConfig.SaveMalConfig(&models.MalConfig{
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
-		AccessToken:  token,
+		TokenRes:     *res,
 	})
 
 	fmt.Println("Authentication successful. Access token has been saved.")
 }
 
-// getAuthenticationURL retrieves the authentication URL with code_challenge
+func GetMalAcessCode() (string, error) {
+	malConfig := config.GetAppConfig().GetMalConfig()
+
+	// check if token is expired or will expire soon
+	currentTime := time.Now()
+	expirationTime := currentTime.Add(time.Duration(malConfig.TokenRes.ExpiresIn) * time.Second)
+	expirationBuffer := 5 * time.Minute
+
+	if expirationTime.After(currentTime.Add(expirationBuffer)) {
+		// token is not expired
+		return malConfig.TokenRes.AccessToken, nil
+	}
+
+	// token is expired and new one should be requested
+	res, err := getRefreshTokenRes(malConfig.ClientId, malConfig.ClientSecret, malConfig.TokenRes.RefreshToken)
+	if err != nil {
+		return "", err
+	}
+
+	// Save new token info in the Mal config
+	malConfig.TokenRes = *res
+	config.GetAppConfig().SaveMalConfig(malConfig)
+
+	return res.AccessToken, nil
+}
+
+// retrieves the authentication URL with code_challenge
 func getAuthenticationURL(clientId, codeChallenge string) string {
 	return fmt.Sprintf("https://myanimelist.net/v1/oauth2/authorize?response_type=code&client_id=%s&code_challenge=%s", clientId, codeChallenge)
 }
 
-// getAccessToken exchanges the code for an access token
-func getAccessToken(clientId, clientSecret, authorizationCode, codeVerifier string) (string, error) {
-	tokenEndpoint := "https://myanimelist.net/v1/oauth2/token"
-
+// exchanges the auth code for an access token
+func getAccessTokenRes(clientId, clientSecret, authorizationCode, codeVerifier string) (*models.MalTokenRes, error) {
 	data := url.Values{}
 	data.Set("client_id", clientId)
 	data.Set("client_secret", clientSecret)
 	data.Set("code", authorizationCode)
 	data.Set("code_verifier", codeVerifier)
 	data.Set("grant_type", "authorization_code")
+
+	return sendMalTokenRequest(data)
+}
+
+// request a new access token using refresh token
+func getRefreshTokenRes(clientId, clientSecret, refreshToken string) (*models.MalTokenRes, error) {
+	data := url.Values{}
+	data.Set("client_id", clientId)
+	data.Set("client_secret", clientSecret)
+	data.Set("refresh_token", refreshToken)
+	data.Set("grant_type", "refresh_token")
+
+	return sendMalTokenRequest(data)
+}
+
+func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
+	tokenEndpoint := "https://myanimelist.net/v1/oauth2/token"
 
 	// Send a POST request to obtain the token.
 	client := &http.Client{
@@ -76,7 +117,7 @@ func getAccessToken(clientId, clientSecret, authorizationCode, codeVerifier stri
 
 	resp, err := client.Post(tokenEndpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
-		return "", &models.AppError{
+		return nil, &models.AppError{
 			Message: "Failed to request the access token",
 			Err:     err,
 		}
@@ -86,7 +127,7 @@ func getAccessToken(clientId, clientSecret, authorizationCode, codeVerifier stri
 	// Read the response body.
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", &models.AppError{
+		return nil, &models.AppError{
 			Message: "Failed to read the access token response body",
 			Err:     err,
 		}
@@ -94,27 +135,26 @@ func getAccessToken(clientId, clientSecret, authorizationCode, codeVerifier stri
 
 	// Check for errors in the response
 	if resp.StatusCode != http.StatusOK {
-		return "", &models.AppError{
+		return nil, &models.AppError{
 			Message: "Access token request failed " + fmt.Sprintf("Error: %s", body),
 		}
 	}
 
 	// Parse the JSON response to get the access token
-	var tokenResponse struct {
-		AccessToken string `json:"access_token"`
-	}
-	err = json.Unmarshal(body, &tokenResponse)
+	tokenRes := models.MalTokenRes{}
+	err = json.Unmarshal(body, &tokenRes)
 	if err != nil {
-		return "", &models.AppError{
+		return nil, &models.AppError{
 			Message: "Failed to parse the access token response",
 			Err:     err,
 		}
 	}
 
-	return tokenResponse.AccessToken, nil
+	return &tokenRes, nil
 }
 
-// GenerateCodeVerifier generates a code verifier for OAuth2 PKCE
+
+// generates a code verifier for OAuth2 PKCE
 func generateCodeVerifier() (string, error) {
 	// Generate a 32-byte (256-bit) random value
 	verifierBytes := make([]byte, 32)
