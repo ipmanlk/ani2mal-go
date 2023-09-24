@@ -12,8 +12,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
+	"time"
 )
 
 func AuthMal() {
@@ -24,7 +24,10 @@ func AuthMal() {
 	clientSecret := utils.GetStrInput()
 
 	// Generate a code verifier and code challenge
-	codeVerifier := generateCodeVerifier()
+	codeVerifier, err := generateCodeVerifier()
+	if err != nil {
+		log.Fatal(err.Error(), err)
+	}
 
 	// Use the getAuthenticationURL function to retrieve the login URL
 	loginURL := getAuthenticationURL(clientId, codeVerifier)
@@ -35,12 +38,7 @@ func AuthMal() {
 
 	token, err := getAccessToken(clientId, clientSecret, code, codeVerifier)
 	if err != nil {
-		log.Fatalf("Error getting token: %v\n", err)
-	}
-
-	err = saveTokenToFile(token, "token.txt")
-	if err != nil {
-		log.Fatalf("Error saving token: %v\n", err)
+		log.Fatal(err.Error(), err)
 	}
 
 	// Get App config
@@ -72,23 +70,33 @@ func getAccessToken(clientId, clientSecret, authorizationCode, codeVerifier stri
 	data.Set("grant_type", "authorization_code")
 
 	// Send a POST request to obtain the token.
-	resp, err := http.Post(tokenEndpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+
+	resp, err := client.Post(tokenEndpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
-		fmt.Println("Unable to request token:", err)
-		os.Exit(1)
+		return "", &models.AppError{
+			Message: "Failed to request the access token",
+			Err:     err,
+		}
 	}
 	defer resp.Body.Close()
 
 	// Read the response body.
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Unable to read response body:", err)
-		os.Exit(1)
+		return "", &models.AppError{
+			Message: "Failed to read the access token response body",
+			Err:     err,
+		}
 	}
 
 	// Check for errors in the response
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Error: %s", body)
+		return "", &models.AppError{
+			Message: "Access token request failed " + fmt.Sprintf("Error: %s", body),
+		}
 	}
 
 	// Parse the JSON response to get the access token
@@ -97,38 +105,28 @@ func getAccessToken(clientId, clientSecret, authorizationCode, codeVerifier stri
 	}
 	err = json.Unmarshal(body, &tokenResponse)
 	if err != nil {
-		return "", err
+		return "", &models.AppError{
+			Message: "Failed to parse the access token response",
+			Err:     err,
+		}
 	}
 
 	return tokenResponse.AccessToken, nil
 }
 
-// saveTokenToFile saves the token to a file.
-func saveTokenToFile(token, filePath string) error {
-	file, err := os.Create(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = file.WriteString(token)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GenerateCodeVerifier generates a code verifier for OAuth2 PKCE
-func generateCodeVerifier() string {
+func generateCodeVerifier() (string, error) {
 	// Generate a 32-byte (256-bit) random value
 	verifierBytes := make([]byte, 32)
 	_, err := rand.Read(verifierBytes)
 	if err != nil {
-		log.Fatalln("Error generating random string: ", err)
+		return "", &models.AppError{
+			Message: "Error generating random string",
+			Err:     err,
+		}
 	}
 
 	// Encode the random bytes as a URL-safe base64 string
 	codeVerifier := base64.RawURLEncoding.EncodeToString(verifierBytes)
-	return codeVerifier
+	return codeVerifier, nil
 }
