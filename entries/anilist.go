@@ -6,9 +6,12 @@ import (
 	"ipmanlk/ani2mal/models"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
+
+type graphQLRequest struct {
+	Query string `json:"query"`
+}
 
 func GetList(username string, mediaType string) (*[]models.Media, error) {
 	req, err := getRequestOptions(username, mediaType)
@@ -43,68 +46,52 @@ func GetList(username string, mediaType string) (*[]models.Media, error) {
 		}
 	}
 
-	return nil, nil
+	return formatListRes(&anilistRes, mediaType), nil
 }
 
 func formatListRes(res *models.AnilistRes, mediaType string) *[]models.Media {
-	var (
-		wg            sync.WaitGroup
-		mu            sync.Mutex
-		formattedList []models.Media
-	)
-
 	mType := strings.ToLower(mediaType)
+	formattedList := make([]models.Media, 0)
 
 	for _, list := range res.Data.MediaListCollection.Lists {
 		if list.IsCustomList {
 			continue
 		}
 
-		wg.Add(1)
 		status := strings.ToLower(list.Name)
 
 		if status == "watching" || status == "reading" {
 			status = "current"
 		}
 
-		go func(list models.AnilistList) {
-			defer wg.Done()
-
-			for _, i := range list.Entries {
-				if i.Media.IDMal == nil {
-					continue
-				}
-
-				mu.Lock()
-				defer mu.Unlock()
-
-				repeat := false
-				if i.Repeat == 1 {
-					repeat = true
-				}
-
-				formattedList = append(formattedList, models.Media{
-					ID:       *i.Media.IDMal,
-					Progress: i.Progress,
-					Score:    i.Score,
-					Status:   status,
-					Repeat:   repeat,
-					Type:     mType,
-					Length:   getLength(i.Media.Chapters, i.Media.Episodes),
-				})
+		for _, i := range list.Entries {
+			if i.Media.IDMal == nil {
+				continue
 			}
-		}(list)
-	}
 
-	wg.Wait()
+			repeat := false
+			if i.Repeat == 1 {
+				repeat = true
+			}
+
+			formattedList = append(formattedList, models.Media{
+				ID:       *i.Media.IDMal,
+				Progress: i.Progress,
+				Score:    i.Score,
+				Status:   status,
+				Repeat:   repeat,
+				Type:     mType,
+				Length:   getLength(i.Media.Chapters, i.Media.Episodes),
+			})
+		}
+	}
 
 	return &formattedList
 }
 
 func getRequestOptions(username string, mediaType string) (*http.Request, error) {
 	query := fmt.Sprintf(`{
-    "query": "query {
-      MediaListCollection(userName: \"%s\", type: %s) {
+      MediaListCollection(userName: "%s", type: %s) {
         lists {
           entries {
             id
@@ -127,10 +114,18 @@ func getRequestOptions(username string, mediaType string) (*http.Request, error)
           status
         }
       }
-    }"
   }`, username, mediaType)
 
-	req, err := http.NewRequest("POST", "https://graphql.anilist.co", strings.NewReader(query))
+	requestBody := graphQLRequest{
+		Query: query,
+	}
+
+	reqBodyJSON, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", "https://graphql.anilist.co", strings.NewReader(string(reqBodyJSON)))
 	if err != nil {
 		return nil, err
 	}

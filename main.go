@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"ipmanlk/ani2mal/auth"
 	"ipmanlk/ani2mal/entries"
 	"os"
 )
@@ -11,15 +10,13 @@ import (
 func main() {
 	fmt.Println("Hello, World!")
 
-	token, err := auth.GetMalAcessCode()
+	res, err := entries.GetList("CrystalBullet", "ANIME")
 
 	if err != nil {
 		panic(err)
 	}
 
-	lists, err := entries.GetMalEntries(token)
-
-	jsonData, _ := json.MarshalIndent(lists, "", " ")
+	jsonData, err := json.MarshalIndent(res, "", " ")
 
 	os.WriteFile("lala.json", jsonData, 0644)
 }
