@@ -26,7 +26,7 @@ func AuthMal() {
 	// Generate a code verifier and code challenge
 	codeVerifier, err := generateCodeVerifier()
 	if err != nil {
-		log.Fatal(err.Error(), err)
+		log.Fatal(err.Error())
 	}
 
 	// Use the getAuthenticationURL function to retrieve the login URL
@@ -38,7 +38,7 @@ func AuthMal() {
 
 	res, err := getAccessTokenRes(clientId, clientSecret, code, codeVerifier)
 	if err != nil {
-		log.Fatal(err.Error(), err)
+		log.Fatal(err.Error())
 	}
 
 	// Get App config
