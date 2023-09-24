@@ -73,6 +73,37 @@ func (cfg *AppConfig) GetMalConfig() *models.MalConfig {
 	return &malConfig
 }
 
+func (cfg *AppConfig) SaveAnilistConfig(anilistConfig *models.AnilistConfig) {
+	jsonData, err := json.MarshalIndent(anilistConfig, "", " ")
+
+	if err != nil {
+		log.Fatal("Failed to marshal Anilist config", err)
+	}
+
+	err = os.WriteFile(cfg.anilistConfigPath, jsonData, 0644)
+
+	if err != nil {
+		log.Fatal("Error writing Anilist config", err)
+	}
+}
+
+
+func (cfg *AppConfig) GetAnilistConfig() *models.AnilistConfig {
+	_, err := os.Stat(cfg.anilistConfigPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+					log.Fatal("Please configure Anilist first")
+		}
+		log.Fatalf("Failed to read Anilist configuration file. Check if file permissions are correct %+v", err)
+	}
+
+	content, _ := os.ReadFile(cfg.anilistConfigPath)
+
+	var anilistConfig models.AnilistConfig
+	json.Unmarshal(content, &anilistConfig)
+
+	return &anilistConfig
+}
 
 func getConfigDir() (string, error) {
 	var configDir string

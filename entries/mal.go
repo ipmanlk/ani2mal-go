@@ -40,7 +40,7 @@ func getList(listType string, bearerToken string) (*[]models.Media, error) {
 
 	// Loop to fetch all pages
 	for url != "" {
-		resp, err := sendRequest(url, bearerToken)
+		res, err := sendRequest(url, bearerToken)
 
 		if err != nil {
 			return nil, &models.AppError{
@@ -48,9 +48,10 @@ func getList(listType string, bearerToken string) (*[]models.Media, error) {
 				Err:     err,
 			}
 		}
+		defer res.Body.Close()
 
 		var malList models.MalListRes
-		err = json.NewDecoder(resp.Body).Decode(&malList)
+		err = json.NewDecoder(res.Body).Decode(&malList)
 		if err != nil {
 			return nil, &models.AppError{
 				Message: "Failed to parse MAL list response",
@@ -86,12 +87,12 @@ func sendRequest(url string, bearerToken string) (*http.Response, error) {
 
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
 
-	resp, err := client.Do(req)
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 
-	return resp, nil
+	return res, nil
 }
 
 func formatMalListRes(list *models.MalListRes, listType string) *[]models.Media {

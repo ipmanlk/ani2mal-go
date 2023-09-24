@@ -115,17 +115,17 @@ func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
 		Timeout: 15 * time.Second,
 	}
 
-	resp, err := client.Post(tokenEndpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
+	res, err := client.Post(tokenEndpoint, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to request the access token",
 			Err:     err,
 		}
 	}
-	defer resp.Body.Close()
+	defer res.Body.Close()
 
 	// Read the response body.
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to read the access token response body",
@@ -134,7 +134,7 @@ func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
 	}
 
 	// Check for errors in the response
-	if resp.StatusCode != http.StatusOK {
+	if res.StatusCode != http.StatusOK {
 		return nil, &models.AppError{
 			Message: "Access token request failed " + fmt.Sprintf("Error: %s", body),
 		}
