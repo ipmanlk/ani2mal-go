@@ -29,8 +29,8 @@ type MalDatum struct {
 type MalListStatus struct {
 	Status             string  `json:"status"`
 	Score              float64 `json:"score"`
-	NumEpisodesWatched int     `json:"num_episodes_watched,omitempty"`
-	NumChaptersRead    int     `json:"num_chapters_read,omitempty"`
+	NumEpisodesWatched int     `json:"num_episodes_watched"`
+	NumChaptersRead    int     `json:"num_chapters_read"`
 	IsRewatching       bool    `json:"is_rewatching"`
 	UpdatedAt          string  `json:"updated_at"`
 	IsRereading        bool    `json:"is_rereading"`
@@ -40,8 +40,8 @@ type MalNode struct {
 	ID          int                `json:"id"`
 	Title       string             `json:"title"`
 	MainPicture MalNodeMainPicture `json:"main_picture"`
-	NumEpisodes int                `json:"num_episodes,omitempty"`
-	NumChapters int                `json:"num_chapters,omitempty"`
+	NumEpisodes int                `json:"num_episodes"`
+	NumChapters int                `json:"num_chapters"`
 }
 
 type MalNodeMainPicture struct {
@@ -52,3 +52,4 @@ type MalNodeMainPicture struct {
 type MalListPaging struct {
 	Next string `json:"next"`
 }
+
