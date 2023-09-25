@@ -108,30 +108,28 @@ func formatMalListRes(list *models.MalListRes, listType string) *[]models.Media 
 
 	formattedList := make([]models.Media, 0)
 
-	if listType == "animelist" {
-		for _, i := range list.Data {
-			formattedList = append(formattedList, models.Media{
-				ID:       i.Node.ID,
-				Progress: i.ListStatus.NumEpisodesWatched,
-				Score:    i.ListStatus.Score,
-				Status:   malStatuses[i.ListStatus.Status],
-				Repeat:   i.ListStatus.IsRewatching,
-				Type:     "anime",
-				Length:   i.Node.NumEpisodes,
-			})
+	for _, i := range list.Data {
+		mediaType := "anime"
+		progress := i.ListStatus.NumEpisodesWatched
+		length := i.Node.NumEpisodes
+		repeat := i.ListStatus.IsRewatching
+
+		if listType == "mangalist" {
+			mediaType = "manga"
+			progress = i.ListStatus.NumChaptersRead
+			length = i.Node.NumChapters
+			repeat = i.ListStatus.IsRereading
 		}
-	} else {
-		for _, i := range list.Data {
-			formattedList = append(formattedList, models.Media{
-				ID:       i.Node.ID,
-				Progress: i.ListStatus.NumChaptersRead,
-				Score:    i.ListStatus.Score,
-				Status:   malStatuses[i.ListStatus.Status],
-				Repeat:   i.ListStatus.IsRereading,
-				Type:     "manga",
-				Length:   i.Node.NumChapters,
-			})
-		}
+
+		formattedList = append(formattedList, models.Media{
+			ID:       i.Node.ID,
+			Progress: progress,
+			Score:    i.ListStatus.Score,
+			Status:   malStatuses[i.ListStatus.Status],
+			Repeat:   repeat,
+			Type:     mediaType,
+			Length:   length,
+		})
 	}
 
 	return &formattedList
