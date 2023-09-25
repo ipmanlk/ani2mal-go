@@ -40,7 +40,7 @@ func getMalList(listType string, bearerToken string) (*[]models.Media, error) {
 
 	// Loop to fetch all pages
 	for url != "" {
-		res, err := sendRequest(url, bearerToken)
+		res, err := sendMalGetRequest(url, bearerToken)
 
 		if err != nil {
 			return nil, &models.AppError{
@@ -74,7 +74,7 @@ func getMalList(listType string, bearerToken string) (*[]models.Media, error) {
 	return formattedList, nil
 }
 
-func sendRequest(url string, bearerToken string) (*http.Response, error) {
+func sendMalGetRequest(url string, bearerToken string) (*http.Response, error) {
 	timeout := 15 * time.Second
 	client := &http.Client{
 		Timeout: timeout,
