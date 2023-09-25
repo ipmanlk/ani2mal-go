@@ -3,14 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"ipmanlk/ani2mal/entries"
+	"ipmanlk/ani2mal/media"
 	"os"
 )
 
 func main() {
 	fmt.Println("Hello, World!")
 
-	res, err := entries.GetList("CrystalBullet", "ANIME")
+	res, err := media.GetAnilistEntries("CrystalBullet")
 
 	if err != nil {
 		panic(err)

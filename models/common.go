@@ -12,13 +12,13 @@ func (e *AppError) Error() string {
 // general format to store anime / manga
 // ID refers the the MAL ID
 type Media struct {
-	ID       int     `json:"id"`
-	Length   int     `json:"length,omitempty"`
-	Progress int     `json:"progress"`
-	Score    float64 `json:"score"`
-	Status   string  `json:"status"`
-	Repeat   bool     `json:"repeat,omitempty"`
-	Type     string  `json:"type"`
+	ID       int    `json:"id"`
+	Length   int    `json:"length,omitempty"`
+	Progress int    `json:"progress"`
+	Score    int    `json:"score"`
+	Status   string `json:"status"`
+	Repeat   bool   `json:"repeat,omitempty"`
+	Type     string `json:"type"`
 }
 
 type SourceEntries struct {

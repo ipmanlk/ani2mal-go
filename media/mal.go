@@ -1,4 +1,4 @@
-package entries
+package media
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 )
 
 func GetMalEntries(bearerToken string) (*models.SourceEntries, error) {
-	malAnime, err := getList("animelist", bearerToken)
+	malAnime, err := getMalList("animelist", bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch MAL Anime List",
@@ -17,7 +17,7 @@ func GetMalEntries(bearerToken string) (*models.SourceEntries, error) {
 		}
 	}
 
-	malManga, err := getList("mangalist", bearerToken)
+	malManga, err := getMalList("mangalist", bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch MAL Manga List",
@@ -31,7 +31,7 @@ func GetMalEntries(bearerToken string) (*models.SourceEntries, error) {
 	}, nil
 }
 
-func getList(listType string, bearerToken string) (*[]models.Media, error) {
+func getMalList(listType string, bearerToken string) (*[]models.Media, error) {
 	// Define the MAL API URL
 	baseURL := fmt.Sprintf("https://api.myanimelist.net/v2/users/@me/%s", listType)
 	url := baseURL + "?fields=list_status,num_episodes,num_chapters&limit=1000&nsfw=true"
