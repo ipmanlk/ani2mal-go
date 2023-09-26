@@ -36,7 +36,3 @@ type SourceData struct {
 	Manga    []Media       `json:"manga"`
 }
 
-type SourceEntries struct {
-	Anime *[]Media `json:"anime"`
-	Manga *[]Media `json:"manga"`
-}
