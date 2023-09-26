@@ -107,6 +107,7 @@ func formatListResponse(res *models.AnilistRes, mediaType string, stats *models.
 
 			media := models.Media{
 				ID:       *i.Media.IDMal,
+				Title:    i.Media.Title.Romaji,
 				Progress: i.Progress,
 				Score:    int(math.Round(i.Score)),
 				Status:   status,

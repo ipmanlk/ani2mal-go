@@ -206,6 +206,7 @@ func formatListResponse(list *models.MalListRes, listType string, stats *models.
 
 		media := models.Media{
 			ID:       item.Node.ID,
+			Title:    item.Node.Title,
 			Progress: progress,
 			Score:    item.ListStatus.Score,
 			Status:   status,

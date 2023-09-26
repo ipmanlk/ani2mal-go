@@ -13,6 +13,7 @@ func (e *AppError) Error() string {
 // ID refers the the MAL ID
 type Media struct {
 	ID       int    `json:"id"`
+	Title    string `json:"title"`
 	Length   int    `json:"length,omitempty"`
 	Progress int    `json:"progress"`
 	Score    int    `json:"score"`
@@ -35,4 +36,3 @@ type SourceData struct {
 	Anime    []Media       `json:"anime"`
 	Manga    []Media       `json:"manga"`
 }
-

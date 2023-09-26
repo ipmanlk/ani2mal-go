@@ -1,27 +1,24 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
+	"ipmanlk/ani2mal/anilist"
 	"ipmanlk/ani2mal/config"
 	"ipmanlk/ani2mal/mal"
-	"os"
 )
 
 func main() {
 	fmt.Println("Hello, World!")
 
-	// res, err := anilist.GetData("CrystalBullet")
-
-	// if err != nil {
-	// 	panic(err)
-	// }
+	anilistData, _ := anilist.GetUserData("CrystalBullet")
 
 	token := config.GetAppConfig().GetMalConfig().TokenRes.AccessToken
 
-	res, _ := mal.GetUserData(token)
+	malData, _ := mal.GetUserData(token)
 
-	jsonData, _ := json.MarshalIndent(res, "", " ")
+	mal.SyncData(token, anilistData, malData)
 
-	os.WriteFile("lala.json", jsonData, 0644)
+	// jsonData, _ := json.MarshalIndent(res, "", " ")
+
+	// os.WriteFile("lala.json", jsonData, 0644)
 }
