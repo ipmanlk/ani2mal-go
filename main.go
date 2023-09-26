@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"ipmanlk/ani2mal/api"
 	"ipmanlk/ani2mal/config"
+	"ipmanlk/ani2mal/mal"
 	"os"
 )
 
@@ -19,7 +19,7 @@ func main() {
 
 	token := config.GetAppConfig().GetMalConfig().TokenRes.AccessToken
 
-	res, _ := api.GetMalEntries(token)
+	res, _ := mal.GetEntries(token)
 
 	jsonData, _ := json.MarshalIndent(res, "", " ")
 

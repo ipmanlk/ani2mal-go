@@ -1,4 +1,4 @@
-package api
+package anilist
 
 import (
 	"encoding/json"
@@ -14,8 +14,8 @@ type graphQLRequest struct {
 	Query string `json:"query"`
 }
 
-func GetAnilistEntries(username string) (*models.SourceEntries, error) {
-	anilistAnime, err := getAnilistList(username, "ANIME")
+func GetEntries(username string) (*models.SourceEntries, error) {
+	anilistAnime, err := getList(username, "ANIME")
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch Anilist Anime List",
@@ -23,7 +23,7 @@ func GetAnilistEntries(username string) (*models.SourceEntries, error) {
 		}
 	}
 
-	anilistManga, err := getAnilistList(username, "MANGA")
+	anilistManga, err := getList(username, "MANGA")
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch Anilist Manga List",
@@ -32,13 +32,13 @@ func GetAnilistEntries(username string) (*models.SourceEntries, error) {
 	}
 
 	return &models.SourceEntries{
-		Anime: anilistAnime,
-		Manga: anilistManga,
+		Anime: formatListResponse(anilistAnime, "ANIME"),
+		Manga: formatListResponse(anilistManga, "MANGA"),
 	}, nil
 }
 
-func getAnilistList(username string, mediaType string) (*[]models.Media, error) {
-	req, err := getAnilistRequestOptions(username, mediaType)
+func getList(username string, mediaType string) (*models.AnilistRes, error) {
+	req, err := getRequestOptions(username, mediaType)
 
 	if err != nil {
 		return nil, &models.AppError{
@@ -70,10 +70,10 @@ func getAnilistList(username string, mediaType string) (*[]models.Media, error) 
 		}
 	}
 
-	return formatAnilistListRes(&anilistRes, mediaType), nil
+	return &anilistRes, nil
 }
 
-func formatAnilistListRes(res *models.AnilistRes, mediaType string) *[]models.Media {
+func formatListResponse(res *models.AnilistRes, mediaType string) *[]models.Media {
 	mType := strings.ToLower(mediaType)
 	formattedList := make([]models.Media, 0)
 
@@ -105,7 +105,7 @@ func formatAnilistListRes(res *models.AnilistRes, mediaType string) *[]models.Me
 				Status:   status,
 				Repeat:   repeat,
 				Type:     mType,
-				Length:   getAnilistMediaLength(&i.Media),
+				Length:   getMediaLength(&i.Media),
 			})
 		}
 	}
@@ -113,7 +113,7 @@ func formatAnilistListRes(res *models.AnilistRes, mediaType string) *[]models.Me
 	return &formattedList
 }
 
-func getAnilistRequestOptions(username string, mediaType string) (*http.Request, error) {
+func getRequestOptions(username string, mediaType string) (*http.Request, error) {
 	query := fmt.Sprintf(`{
       MediaListCollection(userName: "%s", type: %s) {
         lists {
@@ -160,7 +160,7 @@ func getAnilistRequestOptions(username string, mediaType string) (*http.Request,
 	return req, nil
 }
 
-func getAnilistMediaLength(media *models.AnilistMedia) int {
+func getMediaLength(media *models.AnilistMedia) int {
 	if media.Chapters != nil {
 		return *media.Chapters
 	} else if media.Episodes != nil {

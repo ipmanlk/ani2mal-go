@@ -1,4 +1,4 @@
-package api
+package mal
 
 import (
 	"bytes"
@@ -11,8 +11,8 @@ import (
 
 const malApiUrl = "https://api.myanimelist.net/v2"
 
-func GetMalEntries(bearerToken string) (*models.SourceEntries, error) {
-	malAnime, err := getMalList("animelist", bearerToken)
+func GetEntries(bearerToken string) (*models.SourceEntries, error) {
+	malAnime, err := getList("animelist", bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch MAL Anime List",
@@ -20,7 +20,7 @@ func GetMalEntries(bearerToken string) (*models.SourceEntries, error) {
 		}
 	}
 
-	malManga, err := getMalList("mangalist", bearerToken)
+	malManga, err := getList("mangalist", bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch MAL Manga List",
@@ -29,15 +29,15 @@ func GetMalEntries(bearerToken string) (*models.SourceEntries, error) {
 	}
 
 	return &models.SourceEntries{
-		Anime: malAnime,
-		Manga: malManga,
+		Anime: formatListResponse(malAnime, "animelist"),
+		Manga: formatListResponse(malManga, "mangalist"),
 	}, nil
 }
 
 func UpdateAnime(bearerToken string, entry models.Media) error {
 	url := fmt.Sprintf("%s/anime/%d/my_list_status", malApiUrl, entry.ID)
-	return sendMalPutRequest(url, bearerToken, map[string]interface{}{
-		"status":               getMalStatus(entry.Status, "ANIME"),
+	return sendPutRequest(url, bearerToken, map[string]interface{}{
+		"status":               getStatus(entry.Status, "ANIME"),
 		"num_watched_episodes": entry.Progress,
 		"score":                entry.Score,
 	})
@@ -45,13 +45,13 @@ func UpdateAnime(bearerToken string, entry models.Media) error {
 
 func DeleteAnime(bearerToken string, entry models.Media) error {
 	url := fmt.Sprintf("%s/anime/%d/my_list_status", malApiUrl, entry.ID)
-	return sendMalDeleteRequest(url, bearerToken)
+	return sendDeleteRequest(url, bearerToken)
 }
 
 func UpdateManga(bearerToken string, entry models.Media) error {
 	url := fmt.Sprintf("%s/manga/%d/my_list_status", malApiUrl, entry.ID)
-	return sendMalPutRequest(url, bearerToken, map[string]interface{}{
-		"status":            getMalStatus(entry.Status, "MANGA"),
+	return sendPutRequest(url, bearerToken, map[string]interface{}{
+		"status":            getStatus(entry.Status, "MANGA"),
 		"num_chapters_read": entry.Progress,
 		"score":             entry.Score,
 	})
@@ -59,10 +59,10 @@ func UpdateManga(bearerToken string, entry models.Media) error {
 
 func DeleteManga(bearerToken string, entry models.Media) error {
 	url := fmt.Sprintf("%s/manga/%d/my_list_status", malApiUrl, entry.ID)
-	return sendMalDeleteRequest(url, bearerToken)
+	return sendDeleteRequest(url, bearerToken)
 }
 
-func getMalList(listType string, bearerToken string) (*[]models.Media, error) {
+func getList(listType string, bearerToken string) (*models.MalListRes, error) {
 	baseURL := fmt.Sprintf("%s/users/@me/%s", malApiUrl, listType)
 	url := baseURL + "?fields=list_status,num_episodes,num_chapters&limit=1000&nsfw=true"
 
@@ -70,7 +70,7 @@ func getMalList(listType string, bearerToken string) (*[]models.Media, error) {
 
 	// Loop to fetch all pages
 	for url != "" {
-		res, err := sendMalGetRequest(url, bearerToken)
+		res, err := sendGetRequest(url, bearerToken)
 
 		if err != nil {
 			return nil, &models.AppError{
@@ -98,12 +98,10 @@ func getMalList(listType string, bearerToken string) (*[]models.Media, error) {
 	var combinedList models.MalListRes
 	combinedList.Data = allMedia
 
-	formattedList := formatMalListRes(&combinedList, listType)
-
-	return formattedList, nil
+	return &combinedList, nil
 }
 
-func sendMalGetRequest(url string, bearerToken string) (*http.Response, error) {
+func sendGetRequest(url string, bearerToken string) (*http.Response, error) {
 	timeout := 15 * time.Second
 	client := &http.Client{
 		Timeout: timeout,
@@ -124,7 +122,7 @@ func sendMalGetRequest(url string, bearerToken string) (*http.Response, error) {
 	return res, nil
 }
 
-func sendMalPutRequest(url string, bearerToken string, data map[string]interface{}) error {
+func sendPutRequest(url string, bearerToken string, data map[string]interface{}) error {
 	client := &http.Client{}
 	body, _ := json.Marshal(data)
 
@@ -149,7 +147,7 @@ func sendMalPutRequest(url string, bearerToken string, data map[string]interface
 	return nil
 }
 
-func sendMalDeleteRequest(url string, bearerToken string) error {
+func sendDeleteRequest(url string, bearerToken string) error {
 	client := &http.Client{}
 
 	req, err := http.NewRequest("DELETE", url, nil)
@@ -172,7 +170,7 @@ func sendMalDeleteRequest(url string, bearerToken string) error {
 	return nil
 }
 
-func formatMalListRes(list *models.MalListRes, listType string) *[]models.Media {
+func formatListResponse(list *models.MalListRes, listType string) *[]models.Media {
 	malStatuses := map[string]string{
 		"plan_to_watch": "planning",
 		"on_hold":       "paused",
@@ -212,7 +210,7 @@ func formatMalListRes(list *models.MalListRes, listType string) *[]models.Media 
 	return &formattedList
 }
 
-func getMalStatus(status string, mediaType string) string {
+func getStatus(status string, mediaType string) string {
 	malStatuses := map[string]string{
 		"planning":  "plan_to_watch",
 		"current":   "watching",

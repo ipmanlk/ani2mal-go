@@ -1,4 +1,4 @@
-package auth
+package anilist
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"ipmanlk/ani2mal/utils"
 )
 
-func AuthAnilist() {
+func performAuth() {
 	fmt.Print("Enter Anilist Username: ")
 	username := utils.GetStrInput()
 

@@ -1,4 +1,4 @@
-package auth
+package mal
 
 import (
 	"crypto/rand"
@@ -16,20 +16,18 @@ import (
 	"time"
 )
 
-func AuthMal() {
+func performAuth() {
 	fmt.Print("Enter Client ID: ")
 	clientId := utils.GetStrInput()
 
 	fmt.Print("Enter Client Secret: ")
 	clientSecret := utils.GetStrInput()
 
-	// Generate a code verifier and code challenge
 	codeVerifier, err := generateCodeVerifier()
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	// Use the getAuthenticationURL function to retrieve the login URL
 	loginURL := getAuthenticationURL(clientId, codeVerifier)
 	fmt.Printf("Login URL: %s\n", loginURL)
 
@@ -41,7 +39,6 @@ func AuthMal() {
 		log.Fatal(err.Error())
 	}
 
-	// Get App config
 	appConfig := config.GetAppConfig()
 
 	appConfig.SaveMalConfig(&models.MalConfig{
@@ -59,7 +56,7 @@ func GetMalAcessCode() (string, error) {
 	// check if token is expired or will expire soon
 	currentTime := time.Now()
 	expirationTime := currentTime.Add(time.Duration(malConfig.TokenRes.ExpiresIn) * time.Second)
-	expirationBuffer := 5 * time.Minute
+	expirationBuffer := 20 * time.Minute
 
 	if expirationTime.After(currentTime.Add(expirationBuffer)) {
 		// token is not expired
@@ -110,7 +107,6 @@ func getRefreshTokenRes(clientId, clientSecret, refreshToken string) (*models.Ma
 func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
 	tokenEndpoint := "https://myanimelist.net/v1/oauth2/token"
 
-	// Send a POST request to obtain the token.
 	client := &http.Client{
 		Timeout: 15 * time.Second,
 	}
@@ -124,7 +120,6 @@ func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
 	}
 	defer res.Body.Close()
 
-	// Read the response body.
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, &models.AppError{
@@ -140,7 +135,6 @@ func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
 		}
 	}
 
-	// Parse the JSON response to get the access token
 	tokenRes := models.MalTokenRes{}
 	err = json.Unmarshal(body, &tokenRes)
 	if err != nil {
@@ -153,7 +147,6 @@ func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
 	return &tokenRes, nil
 }
 
-
 // generates a code verifier for OAuth2 PKCE
 func generateCodeVerifier() (string, error) {
 	// Generate a 32-byte (256-bit) random value
@@ -165,7 +158,6 @@ func generateCodeVerifier() (string, error) {
 			Err:     err,
 		}
 	}
-
 	// Encode the random bytes as a URL-safe base64 string
 	codeVerifier := base64.RawURLEncoding.EncodeToString(verifierBytes)
 	return codeVerifier, nil
