@@ -11,7 +11,7 @@ import (
 
 const malApiUrl = "https://api.myanimelist.net/v2"
 
-func GetData(bearerToken string) (*models.SourceData, error) {
+func GetUserData(bearerToken string) (*models.SourceData, error) {
 	malAnime, err := getList("animelist", bearerToken)
 	if err != nil {
 		return nil, &models.AppError{

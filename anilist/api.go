@@ -14,7 +14,7 @@ type graphQLRequest struct {
 	Query string `json:"query"`
 }
 
-func GetData(username string) (*models.SourceData, error) {
+func GetUserData(username string) (*models.SourceData, error) {
 	anilistAnime, err := getList(username, "ANIME")
 	if err != nil {
 		return nil, &models.AppError{

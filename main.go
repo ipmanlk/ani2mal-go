@@ -19,7 +19,7 @@ func main() {
 
 	token := config.GetAppConfig().GetMalConfig().TokenRes.AccessToken
 
-	res, _ := mal.GetData(token)
+	res, _ := mal.GetUserData(token)
 
 	jsonData, _ := json.MarshalIndent(res, "", " ")
 
