@@ -11,7 +11,7 @@ import (
 func main() {
 	fmt.Println("Hello, World!")
 
-	// res, err := media.GetAnilistEntries("CrystalBullet")
+	// res, err := anilist.GetData("CrystalBullet")
 
 	// if err != nil {
 	// 	panic(err)
@@ -19,7 +19,7 @@ func main() {
 
 	token := config.GetAppConfig().GetMalConfig().TokenRes.AccessToken
 
-	res, _ := mal.GetEntries(token)
+	res, _ := mal.GetData(token)
 
 	jsonData, _ := json.MarshalIndent(res, "", " ")
 

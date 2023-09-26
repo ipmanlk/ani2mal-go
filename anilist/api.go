@@ -14,7 +14,7 @@ type graphQLRequest struct {
 	Query string `json:"query"`
 }
 
-func GetEntries(username string) (*models.SourceEntries, error) {
+func GetData(username string) (*models.SourceData, error) {
 	anilistAnime, err := getList(username, "ANIME")
 	if err != nil {
 		return nil, &models.AppError{
@@ -31,9 +31,16 @@ func GetEntries(username string) (*models.SourceEntries, error) {
 		}
 	}
 
-	return &models.SourceEntries{
-		Anime: formatListResponse(anilistAnime, "ANIME"),
-		Manga: formatListResponse(anilistManga, "MANGA"),
+	stats := models.SourceStats{}
+	entriesMap := make(map[int]models.Media)
+	formattedAnime := formatListResponse(anilistAnime, "ANIME", &stats, entriesMap)
+	formattedManga := formatListResponse(anilistManga, "MANGA", &stats, entriesMap)
+
+	return &models.SourceData{
+		Stats:    stats,
+		MediaMap: entriesMap,
+		Anime:    formattedAnime,
+		Manga:    formattedManga,
 	}, nil
 }
 
@@ -73,7 +80,7 @@ func getList(username string, mediaType string) (*models.AnilistRes, error) {
 	return &anilistRes, nil
 }
 
-func formatListResponse(res *models.AnilistRes, mediaType string) *[]models.Media {
+func formatListResponse(res *models.AnilistRes, mediaType string, stats *models.SourceStats, entriesMap map[int]models.Media) []models.Media {
 	mType := strings.ToLower(mediaType)
 	formattedList := make([]models.Media, 0)
 
@@ -98,7 +105,7 @@ func formatListResponse(res *models.AnilistRes, mediaType string) *[]models.Medi
 				repeat = true
 			}
 
-			formattedList = append(formattedList, models.Media{
+			media := models.Media{
 				ID:       *i.Media.IDMal,
 				Progress: i.Progress,
 				Score:    int(math.Round(i.Score)),
@@ -106,11 +113,28 @@ func formatListResponse(res *models.AnilistRes, mediaType string) *[]models.Medi
 				Repeat:   repeat,
 				Type:     mType,
 				Length:   getMediaLength(&i.Media),
-			})
+			}
+
+			formattedList = append(formattedList, media)
+			entriesMap[media.ID] = media
+
+			// update stats reference data
+			switch status {
+			case "planning":
+				stats.Planning += 1
+			case "paused":
+				stats.Paused += 1
+			case "current":
+				stats.Current += 1
+			case "dropped":
+				stats.Dropped += 1
+			case "completed":
+				stats.Completed += 1
+			}
 		}
 	}
 
-	return &formattedList
+	return formattedList
 }
 
 func getRequestOptions(username string, mediaType string) (*http.Request, error) {

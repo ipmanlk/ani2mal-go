@@ -21,6 +21,21 @@ type Media struct {
 	Type     string `json:"type"`
 }
 
+type SourceStats struct {
+	Planning  int `json:"planning"`
+	Paused    int `json:"paused"`
+	Current   int `json:"current"`
+	Dropped   int `json:"dropped"`
+	Completed int `json:"completed"`
+}
+
+type SourceData struct {
+	Stats    SourceStats   `json:"stats"`
+	MediaMap map[int]Media `json:"media_map"`
+	Anime    []Media       `json:"anime"`
+	Manga    []Media       `json:"manga"`
+}
+
 type SourceEntries struct {
 	Anime *[]Media `json:"anime"`
 	Manga *[]Media `json:"manga"`

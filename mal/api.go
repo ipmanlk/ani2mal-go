@@ -11,7 +11,7 @@ import (
 
 const malApiUrl = "https://api.myanimelist.net/v2"
 
-func GetEntries(bearerToken string) (*models.SourceEntries, error) {
+func GetData(bearerToken string) (*models.SourceData, error) {
 	malAnime, err := getList("animelist", bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
@@ -28,9 +28,16 @@ func GetEntries(bearerToken string) (*models.SourceEntries, error) {
 		}
 	}
 
-	return &models.SourceEntries{
-		Anime: formatListResponse(malAnime, "animelist"),
-		Manga: formatListResponse(malManga, "mangalist"),
+	stats := models.SourceStats{}
+	entriesMap := make(map[int]models.Media)
+	formattedAnime := formatListResponse(malAnime, "ANIME", &stats, entriesMap)
+	formattedManga := formatListResponse(malManga, "MANGA", &stats, entriesMap)
+
+	return &models.SourceData{
+		Stats:    stats,
+		MediaMap: entriesMap,
+		Anime:    formattedAnime,
+		Manga:    formattedManga,
 	}, nil
 }
 
@@ -170,7 +177,7 @@ func sendDeleteRequest(url string, bearerToken string) error {
 	return nil
 }
 
-func formatListResponse(list *models.MalListRes, listType string) *[]models.Media {
+func formatListResponse(list *models.MalListRes, listType string, stats *models.SourceStats, entriesMap map[int]models.Media) []models.Media {
 	malStatuses := map[string]string{
 		"plan_to_watch": "planning",
 		"on_hold":       "paused",
@@ -188,6 +195,7 @@ func formatListResponse(list *models.MalListRes, listType string) *[]models.Medi
 		progress := item.ListStatus.NumEpisodesWatched
 		length := item.Node.NumEpisodes
 		repeat := item.ListStatus.IsRewatching
+		status := malStatuses[item.ListStatus.Status]
 
 		if listType == "mangalist" {
 			mediaType = "manga"
@@ -196,18 +204,35 @@ func formatListResponse(list *models.MalListRes, listType string) *[]models.Medi
 			repeat = item.ListStatus.IsRereading
 		}
 
-		formattedList[i] = models.Media{
+		media := models.Media{
 			ID:       item.Node.ID,
 			Progress: progress,
 			Score:    item.ListStatus.Score,
-			Status:   malStatuses[item.ListStatus.Status],
+			Status:   status,
 			Repeat:   repeat,
 			Type:     mediaType,
 			Length:   length,
 		}
+
+		formattedList[i] = media
+		entriesMap[media.ID] = media
+
+		// update stats reference data
+		switch status {
+		case "planning":
+			stats.Planning += 1
+		case "paused":
+			stats.Paused += 1
+		case "current":
+			stats.Current += 1
+		case "dropped":
+			stats.Dropped += 1
+		case "completed":
+			stats.Completed += 1
+		}
 	}
 
-	return &formattedList
+	return formattedList
 }
 
 func getStatus(status string, mediaType string) string {
