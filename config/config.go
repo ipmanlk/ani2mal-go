@@ -60,7 +60,7 @@ func (cfg *AppConfig) GetMalConfig() *models.MalConfig {
 	_, err := os.Stat(cfg.malConfigPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-					log.Fatal("Please login to MyAnimeList first")
+			log.Fatal("Please login to MyAnimeList first")
 		}
 		log.Fatalf("Failed to read MyAnimeList configuration file. Check if file permissions are correct %+v", err)
 	}
@@ -87,12 +87,11 @@ func (cfg *AppConfig) SaveAnilistConfig(anilistConfig *models.AnilistConfig) {
 	}
 }
 
-
 func (cfg *AppConfig) GetAnilistConfig() *models.AnilistConfig {
 	_, err := os.Stat(cfg.anilistConfigPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-					log.Fatal("Please configure Anilist first")
+			log.Fatal("Please configure Anilist first")
 		}
 		log.Fatalf("Failed to read Anilist configuration file. Check if file permissions are correct %+v", err)
 	}
@@ -117,11 +116,11 @@ func getConfigDir() (string, error) {
 		home := os.Getenv("HOME")
 		configDir = filepath.Join(home, ".config", "ani2mal")
 	default:
-		cwd, err := os.Getwd()
+		exePath, err := os.Executable()
 		if err != nil {
 			return "", err
 		}
-		configDir = filepath.Join(cwd, "ani2mal")
+		configDir = filepath.Join(exePath, "ani2mal")
 	}
 
 	if err := os.MkdirAll(configDir, 0755); err != nil {

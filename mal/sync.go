@@ -30,11 +30,10 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 
 	// removed media should be checked against anilistData
 	for malId, malMedia := range malData.MediaMap {
-		if _, ok := anilistData.MediaMap[malId]; ok {
-			continue
+		if _, ok := anilistData.MediaMap[malId]; !ok {
+			// entry does not exist in anilist
+			removedMedia = append(removedMedia, malMedia)
 		}
-		// entry does not exist in anilist
-		removedMedia = append(removedMedia, malMedia)
 	}
 
 	log.Printf("Added Media: %d", len(addedMedia))
