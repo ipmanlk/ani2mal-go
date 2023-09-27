@@ -34,7 +34,7 @@ func GetAppConfig() *AppConfig {
 			instance = &AppConfig{
 				configDir:         configDir,
 				malConfigPath:     filepath.Join(configDir, "mal.json"),
-				anilistConfigPath: filepath.Join(configDir, "anilist.josn"),
+				anilistConfigPath: filepath.Join(configDir, "anilist.json"),
 				excludesFilePath:  filepath.Join(configDir, "excludes.json"),
 			}
 		})

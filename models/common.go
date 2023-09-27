@@ -9,6 +9,14 @@ func (e *AppError) Error() string {
 	return e.Message
 }
 
+// Response after exchanging auth code
+type TokenRes struct {
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 // general format to store anime / manga
 // ID refers the the MAL ID
 type Media struct {

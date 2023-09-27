@@ -82,7 +82,7 @@ func getAuthenticationURL(clientId, codeChallenge string) string {
 }
 
 // exchanges the auth code for an access token
-func getAccessTokenRes(clientId, clientSecret, authorizationCode, codeVerifier string) (*models.MalTokenRes, error) {
+func getAccessTokenRes(clientId, clientSecret, authorizationCode, codeVerifier string) (*models.TokenRes, error) {
 	data := url.Values{}
 	data.Set("client_id", clientId)
 	data.Set("client_secret", clientSecret)
@@ -94,7 +94,7 @@ func getAccessTokenRes(clientId, clientSecret, authorizationCode, codeVerifier s
 }
 
 // request a new access token using refresh token
-func getRefreshTokenRes(clientId, clientSecret, refreshToken string) (*models.MalTokenRes, error) {
+func getRefreshTokenRes(clientId, clientSecret, refreshToken string) (*models.TokenRes, error) {
 	data := url.Values{}
 	data.Set("client_id", clientId)
 	data.Set("client_secret", clientSecret)
@@ -104,7 +104,7 @@ func getRefreshTokenRes(clientId, clientSecret, refreshToken string) (*models.Ma
 	return sendMalTokenRequest(data)
 }
 
-func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
+func sendMalTokenRequest(data url.Values) (*models.TokenRes, error) {
 	tokenEndpoint := "https://myanimelist.net/v1/oauth2/token"
 
 	client := &http.Client{
@@ -135,7 +135,7 @@ func sendMalTokenRequest(data url.Values) (*models.MalTokenRes, error) {
 		}
 	}
 
-	tokenRes := models.MalTokenRes{}
+	tokenRes := models.TokenRes{}
 	err = json.Unmarshal(body, &tokenRes)
 	if err != nil {
 		return nil, &models.AppError{

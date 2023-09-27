@@ -2,7 +2,10 @@ package models
 
 // Configuration file format
 type AnilistConfig struct {
-	Username string `json:"username"`
+	Username     string   `json:"username"`
+	ClientId     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	TokenRes     TokenRes `json:"token_res"`
 }
 
 // Response from Anilist Lists (Anime, Manga)
