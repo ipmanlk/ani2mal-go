@@ -50,7 +50,7 @@ func PerformAuth() {
 	fmt.Println("Authentication successful. Access token has been saved.")
 }
 
-func GetMalAcessCode() (string, error) {
+func GetAccessCode() (string, error) {
 	malConfig := config.GetAppConfig().GetMalConfig()
 
 	// check if token is expired or will expire soon
@@ -90,7 +90,7 @@ func getAccessTokenRes(clientId, clientSecret, authorizationCode, codeVerifier s
 	data.Set("code_verifier", codeVerifier)
 	data.Set("grant_type", "authorization_code")
 
-	return sendMalTokenRequest(data)
+	return sendTokenRequest(data)
 }
 
 // request a new access token using refresh token
@@ -101,10 +101,10 @@ func getRefreshTokenRes(clientId, clientSecret, refreshToken string) (*models.To
 	data.Set("refresh_token", refreshToken)
 	data.Set("grant_type", "refresh_token")
 
-	return sendMalTokenRequest(data)
+	return sendTokenRequest(data)
 }
 
-func sendMalTokenRequest(data url.Values) (*models.TokenRes, error) {
+func sendTokenRequest(data url.Values) (*models.TokenRes, error) {
 	tokenEndpoint := "https://myanimelist.net/v1/oauth2/token"
 
 	client := &http.Client{

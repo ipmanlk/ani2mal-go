@@ -21,6 +21,13 @@ type accessTokenReqData struct {
 	Code         string `json:"code"`
 }
 
+type refreshTokenReqData struct {
+	GrantType    string `json:"grant_type"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 func PerformAuth() {
 	fmt.Print("Enter Anilist Username: ")
 	username := utils.GetStrInput()
@@ -59,6 +66,7 @@ func getAuthenticationURL(clientId string) string {
 	return fmt.Sprintf("https://anilist.co/api/v2/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code", clientId, "http://localhost:3000")
 }
 
+// exchanges the auth code for an access token
 func getAccessTokenRes(clientId, clientSecret, authorizationCode string) (*models.TokenRes, error) {
 	data := accessTokenReqData{
 		GrantType:    "authorization_code",
@@ -68,18 +76,64 @@ func getAccessTokenRes(clientId, clientSecret, authorizationCode string) (*model
 		Code:         authorizationCode,
 	}
 
+	return sendTokenRequest(data)
+}
+
+func GetAccessCode() (string, error) {
+	anilistConfig := config.GetAppConfig().GetAnilistConfig()
+
+	// check if token is expired or will expire soon
+	currentTime := time.Now()
+	expirationTime := currentTime.Add(time.Duration(anilistConfig.TokenRes.ExpiresIn) * time.Second)
+	expirationBuffer := 20 * time.Minute
+
+	if expirationTime.After(currentTime.Add(expirationBuffer)) {
+		// token is not expired
+		return anilistConfig.TokenRes.AccessToken, nil
+	}
+
+	// token is expired and new one should be requested
+	res, err := getRefreshTokenRes(anilistConfig.ClientId, anilistConfig.ClientSecret, anilistConfig.TokenRes.RefreshToken)
+	if err != nil {
+		return "", err
+	}
+
+	anilistConfig.TokenRes = *res
+	config.GetAppConfig().SaveAnilistConfig(anilistConfig)
+
+	return res.AccessToken, nil
+}
+
+// request a new access token using refresh token
+func getRefreshTokenRes(clientId, clientSecret, refreshToken string) (*models.TokenRes, error) {
+	data := refreshTokenReqData{
+		GrantType:    "refresh_token",
+		ClientID:     clientId,
+		ClientSecret: clientSecret,
+		RefreshToken: refreshToken,
+	}
+	return sendTokenRequest(data)
+}
+
+func sendTokenRequest(data any) (*models.TokenRes, error) {
+	tokenEndpoint := "https://anilist.co/api/v2/oauth/token"
+
+	client := &http.Client{
+		Timeout: 15 * time.Second,
+	}
+
 	reqBody, err := json.Marshal(data)
 	if err != nil {
 		return nil, &models.AppError{
-			Message: "Error marshalling anilist access token request body",
+			Message: "Error marshalling anilist token request body",
 			Err:     err,
 		}
 	}
 
-	req, err := http.NewRequest("POST", "https://anilist.co/api/v2/oauth/token", bytes.NewReader(reqBody))
+	req, err := http.NewRequest("POST", tokenEndpoint, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, &models.AppError{
-			Message: "Error creating anilist access token request",
+			Message: "Error creating anilist token request",
 			Err:     err,
 		}
 	}
@@ -87,14 +141,10 @@ func getAccessTokenRes(clientId, clientSecret, authorizationCode string) (*model
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Timeout: time.Second * 30,
-	}
-
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, &models.AppError{
-			Message: "Error making anilist access token request",
+			Message: "Error making anilist token request",
 			Err:     err,
 		}
 	}
@@ -103,7 +153,7 @@ func getAccessTokenRes(clientId, clientSecret, authorizationCode string) (*model
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, &models.AppError{
-			Message: "Failed to read the access token response body",
+			Message: "Failed to read the token response body",
 			Err:     err,
 		}
 	}
@@ -118,7 +168,7 @@ func getAccessTokenRes(clientId, clientSecret, authorizationCode string) (*model
 	err = json.Unmarshal(body, &tokenRes)
 	if err != nil {
 		return nil, &models.AppError{
-			Message: "Failed to parse the access token response",
+			Message: "Failed to parse the token response",
 		}
 	}
 
