@@ -14,8 +14,8 @@ type graphQLRequest struct {
 	Query string `json:"query"`
 }
 
-func GetUserData(username string) (*models.SourceData, error) {
-	anilistAnime, err := getList(username, "ANIME")
+func GetUserData(username string, bearerToken *string) (*models.SourceData, error) {
+	anilistAnime, err := getList(username, "ANIME", bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch Anilist Anime List",
@@ -23,7 +23,7 @@ func GetUserData(username string) (*models.SourceData, error) {
 		}
 	}
 
-	anilistManga, err := getList(username, "MANGA")
+	anilistManga, err := getList(username, "MANGA", bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch Anilist Manga List",
@@ -44,8 +44,29 @@ func GetUserData(username string) (*models.SourceData, error) {
 	}, nil
 }
 
-func getList(username string, mediaType string) (*models.AnilistRes, error) {
-	req, err := getRequestOptions(username, mediaType)
+func getList(username string, mediaType string, bearerToken *string) (*models.AnilistRes, error) {
+	query := getGraphQuery(username, mediaType)
+
+	requestBody := graphQLRequest{
+		Query: query,
+	}
+
+	reqBodyJSON, err := json.Marshal(requestBody)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", "https://graphql.anilist.co", strings.NewReader(string(reqBodyJSON)))
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	if bearerToken != nil {
+		req.Header.Set("Authorization", "Bearer "+*bearerToken)
+	}
 
 	if err != nil {
 		return nil, &models.AppError{
@@ -138,8 +159,8 @@ func formatListResponse(res *models.AnilistRes, mediaType string, stats *models.
 	return formattedList
 }
 
-func getRequestOptions(username string, mediaType string) (*http.Request, error) {
-	query := fmt.Sprintf(`{
+func getGraphQuery(username string, mediaType string) string {
+	return fmt.Sprintf(`{
       MediaListCollection(userName: "%s", type: %s) {
         lists {
           entries {
@@ -164,25 +185,6 @@ func getRequestOptions(username string, mediaType string) (*http.Request, error)
         }
       }
   }`, username, mediaType)
-
-	requestBody := graphQLRequest{
-		Query: query,
-	}
-
-	reqBodyJSON, err := json.Marshal(requestBody)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", "https://graphql.anilist.co", strings.NewReader(string(reqBodyJSON)))
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-
-	return req, nil
 }
 
 func getMediaLength(media *models.AnilistMedia) int {
