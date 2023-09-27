@@ -62,23 +62,6 @@ func PerformAuth() {
 	fmt.Println("Authentication successful. Access token has been saved.")
 }
 
-func getAuthenticationURL(clientId string) string {
-	return fmt.Sprintf("https://anilist.co/api/v2/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code", clientId, "http://localhost:3000")
-}
-
-// exchanges the auth code for an access token
-func getAccessTokenRes(clientId, clientSecret, authorizationCode string) (*models.TokenRes, error) {
-	data := accessTokenReqData{
-		GrantType:    "authorization_code",
-		ClientID:     clientId,
-		ClientSecret: clientSecret,
-		RedirectURI:  "http://localhost:3000",
-		Code:         authorizationCode,
-	}
-
-	return sendTokenRequest(data)
-}
-
 func GetAccessCode() (string, error) {
 	anilistConfig := config.GetAppConfig().GetAnilistConfig()
 
@@ -102,6 +85,23 @@ func GetAccessCode() (string, error) {
 	config.GetAppConfig().SaveAnilistConfig(anilistConfig)
 
 	return res.AccessToken, nil
+}
+
+func getAuthenticationURL(clientId string) string {
+	return fmt.Sprintf("https://anilist.co/api/v2/oauth/authorize?client_id=%s&redirect_uri=%s&response_type=code", clientId, "http://localhost:3000")
+}
+
+// exchanges the auth code for an access token
+func getAccessTokenRes(clientId, clientSecret, authorizationCode string) (*models.TokenRes, error) {
+	data := accessTokenReqData{
+		GrantType:    "authorization_code",
+		ClientID:     clientId,
+		ClientSecret: clientSecret,
+		RedirectURI:  "http://localhost:3000",
+		Code:         authorizationCode,
+	}
+
+	return sendTokenRequest(data)
 }
 
 // request a new access token using refresh token
