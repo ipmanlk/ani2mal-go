@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func performAuth() {
+func PerformAuth() {
 	fmt.Print("Enter Client ID: ")
 	clientId := utils.GetStrInput()
 
