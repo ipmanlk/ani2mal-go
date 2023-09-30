@@ -1,11 +1,13 @@
 package mal
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"ipmanlk/ani2mal/models"
 	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -42,12 +44,14 @@ func GetUserData(bearerToken string) (*models.SourceData, error) {
 }
 
 func UpdateAnime(bearerToken string, entry models.Media) error {
-	url := fmt.Sprintf("%s/anime/%d/my_list_status", malApiUrl, entry.ID)
-	return sendPutRequest(url, bearerToken, map[string]interface{}{
-		"status":               getStatus(entry.Status, "ANIME"),
-		"num_watched_episodes": entry.Progress,
-		"score":                entry.Score,
-	})
+	requestUrl := fmt.Sprintf("%s/anime/%d/my_list_status", malApiUrl, entry.ID)
+
+	data := url.Values{}
+	data.Set("status", getStatus(entry.Status, "ANIME"))
+	data.Set("num_watched_episodes", strconv.Itoa(entry.Progress))
+	data.Set("score", strconv.Itoa(entry.Score))
+
+	return sendPutRequest(requestUrl, bearerToken, data)
 }
 
 func DeleteAnime(bearerToken string, entry models.Media) error {
@@ -56,12 +60,12 @@ func DeleteAnime(bearerToken string, entry models.Media) error {
 }
 
 func UpdateManga(bearerToken string, entry models.Media) error {
-	url := fmt.Sprintf("%s/manga/%d/my_list_status", malApiUrl, entry.ID)
-	return sendPutRequest(url, bearerToken, map[string]interface{}{
-		"status":            getStatus(entry.Status, "MANGA"),
-		"num_chapters_read": entry.Progress,
-		"score":             entry.Score,
-	})
+	data := url.Values{}
+	data.Set("status", getStatus(entry.Status, "ANIME"))
+	data.Set("num_chapters_read", strconv.Itoa(entry.Progress))
+	data.Set("score", strconv.Itoa(entry.Score))
+	requestUrl := fmt.Sprintf("%s/manga/%d/my_list_status", malApiUrl, entry.ID)
+	return sendPutRequest(requestUrl, bearerToken, data)
 }
 
 func DeleteManga(bearerToken string, entry models.Media) error {
@@ -129,17 +133,16 @@ func sendGetRequest(url string, bearerToken string) (*http.Response, error) {
 	return res, nil
 }
 
-func sendPutRequest(url string, bearerToken string, data map[string]interface{}) error {
+func sendPutRequest(url string, bearerToken string, data url.Values) error {
 	client := &http.Client{}
-	body, _ := json.Marshal(data)
 
-	req, err := http.NewRequest("PUT", url, bytes.NewReader(body))
+	req, err := http.NewRequest("PUT", url, strings.NewReader(data.Encode()))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := client.Do(req)
 	if err != nil {
@@ -147,7 +150,7 @@ func sendPutRequest(url string, bearerToken string, data map[string]interface{})
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusNoContent {
+	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("Failed to update MAL entry, status code: %d", res.StatusCode)
 	}
 
@@ -163,6 +166,7 @@ func sendDeleteRequest(url string, bearerToken string) error {
 	}
 
 	req.Header.Set("Authorization", "Bearer "+bearerToken)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := client.Do(req)
 	if err != nil {
@@ -170,7 +174,7 @@ func sendDeleteRequest(url string, bearerToken string) error {
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusNoContent {
+	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("Failed to delete MAL entry, status code: %d", res.StatusCode)
 	}
 

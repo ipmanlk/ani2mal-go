@@ -10,10 +10,18 @@ func main() {
 	fmt.Println("Hello, World!")
 
 	anilistCode, _ := anilist.GetAccessCode()
-	anilistData, _ := anilist.GetUserData("CrystalBullet", &anilistCode)
+	anilistData, err := anilist.GetUserData("CrystalBullet", &anilistCode)
+
+	if err != nil {
+		panic(err)
+	}
 
 	malCode, _ := mal.GetAccessCode()
-	malData, _ := mal.GetUserData(malCode)
+	malData, err := mal.GetUserData(malCode)
+
+	if err != nil {
+		panic(err)
+	}
 
 	mal.SyncData(malCode, anilistData, malData)
 	// jsonData, _ := json.MarshalIndent(res, "", " ")
