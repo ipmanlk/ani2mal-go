@@ -19,15 +19,22 @@ type TokenRes struct {
 
 // general format to store anime / manga
 // ID refers the the MAL ID
+type MediaType int
+
+const (
+	ANIME MediaType = iota
+	MANGA
+)
+
 type Media struct {
-	ID       int    `json:"id"`
-	Title    string `json:"title"`
-	Length   int    `json:"length,omitempty"`
-	Progress int    `json:"progress"`
-	Score    int    `json:"score"`
-	Status   string `json:"status"`
-	Repeat   bool   `json:"repeat,omitempty"`
-	Type     string `json:"type"`
+	ID       int       `json:"id"`
+	Title    string    `json:"title"`
+	Length   int       `json:"length,omitempty"`
+	Progress int       `json:"progress"`
+	Score    int       `json:"score"`
+	Status   string    `json:"status"`
+	Repeat   bool      `json:"repeat,omitempty"`
+	Type     MediaType `json:"type"`
 }
 
 type SourceStats struct {

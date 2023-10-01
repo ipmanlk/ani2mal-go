@@ -14,7 +14,7 @@ import (
 const malApiUrl = "https://api.myanimelist.net/v2"
 
 func GetUserData(bearerToken string) (*models.SourceData, error) {
-	malAnime, err := getList("animelist", bearerToken)
+	malAnime, err := getList(models.MAL_ANIME_LIST, bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch MAL Anime List",
@@ -22,7 +22,7 @@ func GetUserData(bearerToken string) (*models.SourceData, error) {
 		}
 	}
 
-	malManga, err := getList("mangalist", bearerToken)
+	malManga, err := getList(models.MAL_MANGA_LIST, bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch MAL Manga List",
@@ -32,8 +32,8 @@ func GetUserData(bearerToken string) (*models.SourceData, error) {
 
 	stats := models.SourceStats{}
 	entriesMap := make(map[int]models.Media)
-	formattedAnime := formatListResponse(malAnime, "ANIME", &stats, entriesMap)
-	formattedManga := formatListResponse(malManga, "MANGA", &stats, entriesMap)
+	formattedAnime := formatListResponse(malAnime, models.MAL_ANIME_LIST, &stats, entriesMap)
+	formattedManga := formatListResponse(malManga, models.MAL_MANGA_LIST, &stats, entriesMap)
 
 	return &models.SourceData{
 		Stats:    stats,
@@ -47,7 +47,7 @@ func UpdateAnime(bearerToken string, entry models.Media) error {
 	requestUrl := fmt.Sprintf("%s/anime/%d/my_list_status", malApiUrl, entry.ID)
 
 	data := url.Values{}
-	data.Set("status", getStatus(entry.Status, "ANIME"))
+	data.Set("status", getStatus(entry.Status, models.ANIME))
 	data.Set("num_watched_episodes", strconv.Itoa(entry.Progress))
 	data.Set("score", strconv.Itoa(entry.Score))
 
@@ -61,7 +61,7 @@ func DeleteAnime(bearerToken string, entry models.Media) error {
 
 func UpdateManga(bearerToken string, entry models.Media) error {
 	data := url.Values{}
-	data.Set("status", getStatus(entry.Status, "ANIME"))
+	data.Set("status", getStatus(entry.Status, models.MANGA))
 	data.Set("num_chapters_read", strconv.Itoa(entry.Progress))
 	data.Set("score", strconv.Itoa(entry.Score))
 	requestUrl := fmt.Sprintf("%s/manga/%d/my_list_status", malApiUrl, entry.ID)
@@ -73,7 +73,13 @@ func DeleteManga(bearerToken string, entry models.Media) error {
 	return sendDeleteRequest(url, bearerToken)
 }
 
-func getList(listType string, bearerToken string) (*models.MalListRes, error) {
+func getList(malListType models.MalListType, bearerToken string) (*models.MalListRes, error) {
+	listType := "animelist"
+
+	if malListType == models.MAL_MANGA_LIST {
+		listType = "mangalist"
+	}
+
 	baseURL := fmt.Sprintf("%s/users/@me/%s", malApiUrl, listType)
 	url := baseURL + "?fields=list_status,num_episodes,num_chapters&limit=1000&nsfw=true"
 
@@ -181,7 +187,7 @@ func sendDeleteRequest(url string, bearerToken string) error {
 	return nil
 }
 
-func formatListResponse(list *models.MalListRes, listType string, stats *models.SourceStats, entriesMap map[int]models.Media) []models.Media {
+func formatListResponse(list *models.MalListRes, listType models.MalListType, stats *models.SourceStats, entriesMap map[int]models.Media) []models.Media {
 	malStatuses := map[string]string{
 		"plan_to_watch": "planning",
 		"on_hold":       "paused",
@@ -195,18 +201,19 @@ func formatListResponse(list *models.MalListRes, listType string, stats *models.
 	formattedList := make([]models.Media, len(list.Data))
 
 	for i, item := range list.Data {
-		mediaType := "anime"
+		mediaType := models.ANIME
 		progress := item.ListStatus.NumEpisodesWatched
 		length := item.Node.NumEpisodes
 		repeat := item.ListStatus.IsRewatching
 		status := malStatuses[item.ListStatus.Status]
 
-		if listType == "mangalist" {
-			mediaType = "manga"
+		if listType == models.MAL_MANGA_LIST {
+			mediaType = models.MANGA
 			progress = item.ListStatus.NumChaptersRead
 			length = item.Node.NumChapters
 			repeat = item.ListStatus.IsRereading
 		}
+
 
 		media := models.Media{
 			ID:       item.Node.ID,
@@ -240,7 +247,7 @@ func formatListResponse(list *models.MalListRes, listType string, stats *models.
 	return formattedList
 }
 
-func getStatus(status string, mediaType string) string {
+func getStatus(status string, mediaType models.MediaType) string {
 	malStatuses := map[string]string{
 		"planning":  "plan_to_watch",
 		"current":   "watching",
@@ -249,7 +256,7 @@ func getStatus(status string, mediaType string) string {
 		"dropped":   "dropped",
 	}
 
-	if mediaType == "MANGA" {
+	if mediaType == models.MANGA {
 		malStatuses["planning"] = "plan_to_read"
 		malStatuses["current"] = "reading"
 	}

@@ -15,7 +15,7 @@ type graphQLRequest struct {
 }
 
 func GetUserData(username string, bearerToken *string) (*models.SourceData, error) {
-	anilistAnime, err := getList(username, "ANIME", bearerToken)
+	anilistAnime, err := getList(username, models.ANIME, bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch Anilist Anime List",
@@ -23,7 +23,7 @@ func GetUserData(username string, bearerToken *string) (*models.SourceData, erro
 		}
 	}
 
-	anilistManga, err := getList(username, "MANGA", bearerToken)
+	anilistManga, err := getList(username, models.MANGA, bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch Anilist Manga List",
@@ -33,8 +33,8 @@ func GetUserData(username string, bearerToken *string) (*models.SourceData, erro
 
 	stats := models.SourceStats{}
 	entriesMap := make(map[int]models.Media)
-	formattedAnime := formatListResponse(anilistAnime, "ANIME", &stats, entriesMap)
-	formattedManga := formatListResponse(anilistManga, "MANGA", &stats, entriesMap)
+	formattedAnime := formatListResponse(anilistAnime, models.ANIME, &stats, entriesMap)
+	formattedManga := formatListResponse(anilistManga, models.MANGA, &stats, entriesMap)
 
 	return &models.SourceData{
 		Stats:    stats,
@@ -44,7 +44,7 @@ func GetUserData(username string, bearerToken *string) (*models.SourceData, erro
 	}, nil
 }
 
-func getList(username string, mediaType string, bearerToken *string) (*models.AnilistRes, error) {
+func getList(username string, mediaType models.MediaType, bearerToken *string) (*models.AnilistRes, error) {
 	query := getGraphQuery(username, mediaType)
 
 	requestBody := graphQLRequest{
@@ -101,8 +101,7 @@ func getList(username string, mediaType string, bearerToken *string) (*models.An
 	return &anilistRes, nil
 }
 
-func formatListResponse(res *models.AnilistRes, mediaType string, stats *models.SourceStats, entriesMap map[int]models.Media) []models.Media {
-	mType := strings.ToLower(mediaType)
+func formatListResponse(res *models.AnilistRes, mediaType models.MediaType, stats *models.SourceStats, entriesMap map[int]models.Media) []models.Media {
 	formattedList := make([]models.Media, 0)
 
 	for _, list := range res.Data.MediaListCollection.Lists {
@@ -133,7 +132,7 @@ func formatListResponse(res *models.AnilistRes, mediaType string, stats *models.
 				Score:    int(math.Round(i.Score)),
 				Status:   status,
 				Repeat:   repeat,
-				Type:     mType,
+				Type:     mediaType,
 				Length:   getMediaLength(&i.Media),
 			}
 
@@ -159,7 +158,13 @@ func formatListResponse(res *models.AnilistRes, mediaType string, stats *models.
 	return formattedList
 }
 
-func getGraphQuery(username string, mediaType string) string {
+func getGraphQuery(username string, mediaType models.MediaType) string {
+	anilistMediaType := "ANIME"
+
+	if mediaType == models.MANGA {
+		anilistMediaType = "MANGA"
+	}
+
 	return fmt.Sprintf(`{
       MediaListCollection(userName: "%s", type: %s) {
         lists {
@@ -184,7 +189,7 @@ func getGraphQuery(username string, mediaType string) string {
           status
         }
       }
-  }`, username, mediaType)
+  }`, username, anilistMediaType)
 }
 
 func getMediaLength(media *models.AnilistMedia) int {

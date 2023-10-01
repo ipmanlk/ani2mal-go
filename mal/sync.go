@@ -11,6 +11,8 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 	removedMedia := make([]models.Media, 0)
 	updatedMedia := make([]models.Media, 0)
 
+	updatedStuff := make([]map[string]models.Media, 0)
+
 	for malId, anilistMedia := range anilistData.MediaMap {
 		// entry exist in both media maps
 		if _, ok := malData.MediaMap[malId]; ok {
@@ -20,6 +22,11 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 			}
 			// otherwise entry is modified
 			updatedMedia = append(updatedMedia, anilistMedia)
+
+			updatedStuff = append(updatedStuff, map[string]models.Media{
+				"mal":     malData.MediaMap[malId],
+				"anilist": anilistMedia,
+			})
 
 			continue
 
@@ -45,7 +52,7 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 	log.Printf("Syncing: Added Media")
 
 	for _, media := range append(addedMedia, updatedMedia...) {
-		if media.Type == "anime" {
+		if media.Type == models.ANIME {
 			err := UpdateAnime(malBearerToken, media)
 			if err != nil {
 				fmt.Printf("Failed to update anime %v\n", err)
@@ -62,7 +69,7 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 	}
 
 	for _, media := range removedMedia {
-		if media.Type == "anime" {
+		if media.Type == models.ANIME {
 			err := DeleteAnime(malBearerToken, media)
 			if err != nil {
 				fmt.Printf("Failed to delete anime %v\n", err)
@@ -81,28 +88,16 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 
 // TODO: do something about repeat property
 func isMediaEqual(media1, media2 models.Media) bool {
-	fmt.Printf("%s\n", media1.Title)
+	completed1 := media1.Status == "completed"
+	completed2 := media2.Status == "completed"
 
-	if media1.ID != media2.ID {
-		fmt.Printf("ID mismatch %d %d\n", media1.ID, media2.ID)
-	}
+	idMatch := media1.ID == media2.ID
+	statusMatch := media1.Status == media2.Status
+	scoreMatch := media1.Score == media2.Score
+	progressMatch := media1.Progress == media2.Progress
+	lengthMismatch := media1.Length != media2.Length
 
-	if media1.Progress != media2.Progress {
-		fmt.Printf("Progress mismatch %d %d\n", media1.Progress, media2.Progress)
-	}
-
-	if media1.Score != media2.Score {
-		fmt.Printf("Score mismatch %d %d\n", media1.Score, media2.Score)
-	}
-
-	if media1.Status != media2.Status {
-		fmt.Printf("Status mismatch %s %s\n", media1.Status, media2.Status)
-	}
-
-	fmt.Print("\n===================\n")
-
-	return media1.ID == media2.ID &&
-		media1.Progress == media2.Progress &&
-		media1.Score == media2.Score &&
-		media1.Status == media2.Status
+	return (idMatch && completed1 && completed2) ||
+		(idMatch && statusMatch && scoreMatch && lengthMismatch) ||
+		(idMatch && progressMatch && scoreMatch && statusMatch)
 }

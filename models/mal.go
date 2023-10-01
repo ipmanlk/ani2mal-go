@@ -7,6 +7,13 @@ type MalConfig struct {
 	TokenRes     TokenRes `json:"token_res"`
 }
 
+type MalListType int
+
+const (
+	MAL_ANIME_LIST MalListType = iota
+	MAL_MANGA_LIST
+)
+
 // Response from MAL Lists (Anime, Manga)
 type MalListRes struct {
 	Data   []MalDatum    `json:"data"`
