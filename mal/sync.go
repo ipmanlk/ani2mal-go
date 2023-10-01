@@ -88,16 +88,15 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 
 // TODO: do something about repeat property
 func isMediaEqual(media1, media2 models.Media) bool {
-	completed1 := media1.Status == "completed"
-	completed2 := media2.Status == "completed"
-
 	idMatch := media1.ID == media2.ID
+	completeMatch := media1.Status == "completed" && media2.Status == "completed"
 	statusMatch := media1.Status == media2.Status
 	scoreMatch := media1.Score == media2.Score
 	progressMatch := media1.Progress == media2.Progress
 	lengthMismatch := media1.Length != media2.Length
 
-	return (idMatch && completed1 && completed2) ||
-		(idMatch && statusMatch && scoreMatch && lengthMismatch) ||
-		(idMatch && progressMatch && scoreMatch && statusMatch)
+	return idMatch &&
+		((completeMatch && scoreMatch) ||
+			(statusMatch && scoreMatch && lengthMismatch) ||
+			(progressMatch && scoreMatch && statusMatch))
 }
