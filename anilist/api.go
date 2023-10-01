@@ -15,7 +15,7 @@ type graphQLRequest struct {
 }
 
 func GetUserData(username string, bearerToken *string) (*models.SourceData, error) {
-	anilistAnime, err := getList(username, models.ANIME, bearerToken)
+	anilistAnime, err := getList(username, models.MediaTypeAnime, bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch Anilist Anime List",
@@ -23,7 +23,7 @@ func GetUserData(username string, bearerToken *string) (*models.SourceData, erro
 		}
 	}
 
-	anilistManga, err := getList(username, models.MANGA, bearerToken)
+	anilistManga, err := getList(username, models.MediaTypeManga, bearerToken)
 	if err != nil {
 		return nil, &models.AppError{
 			Message: "Failed to fetch Anilist Manga List",
@@ -33,8 +33,8 @@ func GetUserData(username string, bearerToken *string) (*models.SourceData, erro
 
 	stats := models.SourceStats{}
 	entriesMap := make(map[int]models.Media)
-	formattedAnime := formatListResponse(anilistAnime, models.ANIME, &stats, entriesMap)
-	formattedManga := formatListResponse(anilistManga, models.MANGA, &stats, entriesMap)
+	formattedAnime := formatListResponse(anilistAnime, models.MediaTypeAnime, &stats, entriesMap)
+	formattedManga := formatListResponse(anilistManga, models.MediaTypeManga, &stats, entriesMap)
 
 	return &models.SourceData{
 		Stats:    stats,
@@ -109,10 +109,23 @@ func formatListResponse(res *models.AnilistRes, mediaType models.MediaType, stat
 			continue
 		}
 
-		status := strings.ToLower(list.Name)
+		var status models.MediaStatus
+
+		switch strings.ToLower(list.Name) {
+		case "planning":
+			status = models.MediaStatusPlanning
+		case "paused":
+			status = models.MediaStatusPaused
+		case "watching", "reading":
+			status = models.MediaStatusCurrent
+		case "dropped":
+			status = models.MediaStatusDropped
+		case "completed":
+			status = models.MediaStatusCompleted
+		}
 
 		if status == "watching" || status == "reading" {
-			status = "current"
+			status = models.MediaStatusCurrent
 		}
 
 		for _, i := range list.Entries {
@@ -141,15 +154,15 @@ func formatListResponse(res *models.AnilistRes, mediaType models.MediaType, stat
 
 			// update stats reference data
 			switch status {
-			case "planning":
+			case models.MediaStatusPlanning:
 				stats.Planning += 1
-			case "paused":
+			case models.MediaStatusPaused:
 				stats.Paused += 1
-			case "current":
+			case models.MediaStatusCurrent:
 				stats.Current += 1
-			case "dropped":
+			case models.MediaStatusDropped:
 				stats.Dropped += 1
-			case "completed":
+			case models.MediaStatusCompleted:
 				stats.Completed += 1
 			}
 		}
@@ -161,7 +174,7 @@ func formatListResponse(res *models.AnilistRes, mediaType models.MediaType, stat
 func getGraphQuery(username string, mediaType models.MediaType) string {
 	anilistMediaType := "ANIME"
 
-	if mediaType == models.MANGA {
+	if mediaType == models.MediaTypeManga {
 		anilistMediaType = "MANGA"
 	}
 

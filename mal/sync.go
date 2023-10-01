@@ -52,7 +52,7 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 	log.Printf("Syncing: Added Media")
 
 	for _, media := range append(addedMedia, updatedMedia...) {
-		if media.Type == models.ANIME {
+		if media.Type == models.MediaTypeAnime {
 			err := UpdateAnime(malBearerToken, media)
 			if err != nil {
 				fmt.Printf("Failed to update anime %v\n", err)
@@ -69,7 +69,7 @@ func SyncData(malBearerToken string, anilistData, malData *models.SourceData) {
 	}
 
 	for _, media := range removedMedia {
-		if media.Type == models.ANIME {
+		if media.Type == models.MediaTypeAnime {
 			err := DeleteAnime(malBearerToken, media)
 			if err != nil {
 				fmt.Printf("Failed to delete anime %v\n", err)

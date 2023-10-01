@@ -13,6 +13,26 @@ import (
 
 const malApiUrl = "https://api.myanimelist.net/v2"
 
+// Media status for each MAL API status
+var mediaStatuses = map[string]models.MediaStatus{
+	"plan_to_watch": models.MediaStatusPlanning,
+	"on_hold":       models.MediaStatusPaused,
+	"watching":      models.MediaStatusCurrent,
+	"dropped":       models.MediaStatusDropped,
+	"completed":     models.MediaStatusCompleted,
+	"plan_to_read":  models.MediaStatusPlanning,
+	"reading":       models.MediaStatusCurrent,
+}
+
+// MAL API status for each Media status
+var malStatuses = map[models.MediaStatus]string{
+	models.MediaStatusPlanning:  "plan_to_watch",
+	models.MediaStatusCurrent:   "watching",
+	models.MediaStatusCompleted: "completed",
+	models.MediaStatusPaused:    "on_hold",
+	models.MediaStatusDropped:   "dropped",
+}
+
 func GetUserData(bearerToken string) (*models.SourceData, error) {
 	malAnime, err := getList(models.MAL_ANIME_LIST, bearerToken)
 	if err != nil {
@@ -47,7 +67,7 @@ func UpdateAnime(bearerToken string, entry models.Media) error {
 	requestUrl := fmt.Sprintf("%s/anime/%d/my_list_status", malApiUrl, entry.ID)
 
 	data := url.Values{}
-	data.Set("status", getStatus(entry.Status, models.ANIME))
+	data.Set("status", getMalStatus(entry.Status, models.MediaTypeAnime))
 	data.Set("num_watched_episodes", strconv.Itoa(entry.Progress))
 	data.Set("score", strconv.Itoa(entry.Score))
 
@@ -61,7 +81,7 @@ func DeleteAnime(bearerToken string, entry models.Media) error {
 
 func UpdateManga(bearerToken string, entry models.Media) error {
 	data := url.Values{}
-	data.Set("status", getStatus(entry.Status, models.MANGA))
+	data.Set("status", getMalStatus(entry.Status, models.MediaTypeManga))
 	data.Set("num_chapters_read", strconv.Itoa(entry.Progress))
 	data.Set("score", strconv.Itoa(entry.Score))
 	requestUrl := fmt.Sprintf("%s/manga/%d/my_list_status", malApiUrl, entry.ID)
@@ -188,32 +208,21 @@ func sendDeleteRequest(url string, bearerToken string) error {
 }
 
 func formatListResponse(list *models.MalListRes, listType models.MalListType, stats *models.SourceStats, entriesMap map[int]models.Media) []models.Media {
-	malStatuses := map[string]string{
-		"plan_to_watch": "planning",
-		"on_hold":       "paused",
-		"watching":      "current",
-		"dropped":       "dropped",
-		"completed":     "completed",
-		"plan_to_read":  "planning",
-		"reading":       "current",
-	}
-
 	formattedList := make([]models.Media, len(list.Data))
 
 	for i, item := range list.Data {
-		mediaType := models.ANIME
+		mediaType := models.MediaTypeAnime
 		progress := item.ListStatus.NumEpisodesWatched
 		length := item.Node.NumEpisodes
 		repeat := item.ListStatus.IsRewatching
-		status := malStatuses[item.ListStatus.Status]
+		status := mediaStatuses[item.ListStatus.Status]
 
 		if listType == models.MAL_MANGA_LIST {
-			mediaType = models.MANGA
+			mediaType = models.MediaTypeManga
 			progress = item.ListStatus.NumChaptersRead
 			length = item.Node.NumChapters
 			repeat = item.ListStatus.IsRereading
 		}
-
 
 		media := models.Media{
 			ID:       item.Node.ID,
@@ -231,15 +240,15 @@ func formatListResponse(list *models.MalListRes, listType models.MalListType, st
 
 		// update stats reference data
 		switch status {
-		case "planning":
+		case models.MediaStatusPlanning:
 			stats.Planning += 1
-		case "paused":
+		case models.MediaStatusPaused:
 			stats.Paused += 1
-		case "current":
+		case models.MediaStatusCurrent:
 			stats.Current += 1
-		case "dropped":
+		case models.MediaStatusDropped:
 			stats.Dropped += 1
-		case "completed":
+		case models.MediaStatusCompleted:
 			stats.Completed += 1
 		}
 	}
@@ -247,19 +256,17 @@ func formatListResponse(list *models.MalListRes, listType models.MalListType, st
 	return formattedList
 }
 
-func getStatus(status string, mediaType models.MediaType) string {
-	malStatuses := map[string]string{
-		"planning":  "plan_to_watch",
-		"current":   "watching",
-		"completed": "completed",
-		"paused":    "on_hold",
-		"dropped":   "dropped",
+func getMalStatus(status models.MediaStatus, mediaType models.MediaType) string {
+	malStatus := malStatuses[status]
+
+	if mediaType == models.MediaTypeManga {
+		if status == models.MediaStatusPlanning {
+			malStatus = "plan_to_read"
+		}
+		if status == models.MediaStatusCurrent {
+			malStatus = "reading"
+		}
 	}
 
-	if mediaType == models.MANGA {
-		malStatuses["planning"] = "plan_to_read"
-		malStatuses["current"] = "reading"
-	}
-
-	return malStatuses[status]
+	return malStatus
 }
